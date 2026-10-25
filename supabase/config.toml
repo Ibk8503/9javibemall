@@ -1,0 +1,6 @@
+project_id = "fcwweppdyepnxdfelofc"
+
+[auth.hook.send_email]
+enabled = true
+uri = "https://vibe-logistics-hub.lovable.app/lovable/email/auth/webhook"
+secrets = "env(SEND_EMAIL_HOOK_SECRET)"
