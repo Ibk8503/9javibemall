@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { copyText } from "@/lib/clipboard";
 import { usePartnerContext, roleLabel, shortTime } from "@/lib/partner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,8 +39,7 @@ export const Route = createFileRoute("/_authenticated/credentials")({
 });
 
 function copy(value: string, label: string) {
-  void navigator.clipboard?.writeText(value);
-  toast.success(`${label} copied to clipboard!`);
+  void copyText(value, label);
 }
 
 function Credentials() {

@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 
 import { supabase } from "@/integrations/supabase/client";
+import { copyText } from "@/lib/clipboard";
 import { usePartnerContext } from "@/lib/partner";
 import { dispatchOrderWebhook, getLocalWebhookLogs, type WebhookDispatchLog } from "@/lib/webhooks";
 import { Button } from "@/components/ui/button";
@@ -62,8 +63,7 @@ export const Route = createFileRoute("/_authenticated/webhooks")({
 });
 
 function copyToClipboard(text: string, label = "Copied") {
-  void navigator.clipboard?.writeText(text);
-  toast.success(`${label} copied to clipboard!`);
+  void copyText(text, label);
 }
 
 function WebhookLogsPage() {

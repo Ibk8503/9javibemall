@@ -12,6 +12,7 @@ import {
   shortTime,
   type PartnerRole,
 } from "@/lib/partner";
+import { copyText } from "@/lib/clipboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -111,12 +112,8 @@ function Team() {
     },
     onSuccess: async (token) => {
       const link = `${window.location.origin}/invite?token=${token}`;
-      try {
-        await navigator.clipboard?.writeText(link);
-        toast.success("Invitation created — link copied to clipboard!");
-      } catch {
-        toast.success("Invitation created — use Copy Link button to share");
-      }
+      const copied = await copyText(link, "Invitation link");
+      if (!copied) toast.success("Invitation created — use Copy Link button to share");
       setEmail("");
       queryClient.invalidateQueries({ queryKey: ["invites"] });
     },
@@ -163,12 +160,8 @@ function Team() {
       return token;
     },
     onSuccess: async (token) => {
-      try {
-        await navigator.clipboard?.writeText(`${window.location.origin}/invite?token=${token}`);
-        toast.success(`Invitation renewed for ${expiryDays} days — new link copied!`);
-      } catch {
-        toast.success(`Invitation renewed for ${expiryDays} days`);
-      }
+      const copied = await copyText(`${window.location.origin}/invite?token=${token}`, "Invitation link");
+      if (!copied) toast.success(`Invitation renewed for ${expiryDays} days`);
       queryClient.invalidateQueries({ queryKey: ["invites"] });
     },
     onError: (e) => toast.error((e as Error).message),
