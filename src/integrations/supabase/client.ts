@@ -34,16 +34,18 @@ function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
   // Fall back to process.env for SSR (server-side rendering)
   const SUPABASE_URL =
-    import.meta.env["VITE_SUPABASE_URL"] ||
-    import.meta.env["SUPABASE_URL"] ||
-    process.env["VITE_SUPABASE_URL"] ||
-    process.env["SUPABASE_URL"] ||
+    (typeof import.meta !== "undefined" && (import.meta.env as any)?.["VITE_SUPABASE_URL"]) ||
+    (typeof import.meta !== "undefined" && (import.meta.env as any)?.["SUPABASE_URL"]) ||
+    (typeof process !== "undefined" && process.env?.["VITE_SUPABASE_URL"]) ||
+    (typeof process !== "undefined" && process.env?.["SUPABASE_URL"]) ||
+    (typeof window !== "undefined" && (window as any).__SUPABASE_URL) ||
     "https://fcwweppdyepnxdfelofc.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY =
-    import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
-    import.meta.env["SUPABASE_PUBLISHABLE_KEY"] ||
-    process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
-    process.env["SUPABASE_PUBLISHABLE_KEY"] ||
+    (typeof import.meta !== "undefined" && (import.meta.env as any)?.["VITE_SUPABASE_PUBLISHABLE_KEY"]) ||
+    (typeof import.meta !== "undefined" && (import.meta.env as any)?.["SUPABASE_PUBLISHABLE_KEY"]) ||
+    (typeof process !== "undefined" && process.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"]) ||
+    (typeof process !== "undefined" && process.env?.["SUPABASE_PUBLISHABLE_KEY"]) ||
+    (typeof window !== "undefined" && (window as any).__SUPABASE_ANON_KEY) ||
     "sb_publishable_n7IX8Z8izfESgUnW5p0U6w_y3GuDAT5";
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
@@ -56,16 +58,21 @@ function createSupabaseClient() {
     throw new Error(message);
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    global: {
-      fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
-    },
-    auth: {
-      storage: brokeredPreviewStorage(),
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  });
+  try {
+    return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      global: {
+        fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
+      },
+      auth: {
+        storage: brokeredPreviewStorage(),
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    });
+  } catch (e) {
+    console.error("[Supabase] Failed to create client:", e);
+    throw e;
+  }
 }
 
 let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
