@@ -11,7 +11,7 @@ const esc = (s: string) =>
 
 export const emailIssueToSupport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ issueId: z.string().uuid() }).parse(d))
+  .validator((d) => z.object({ issueId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     // RLS: only the reporter (or partner admins) can read this report.
     const { data: issue, error } = await context.supabase

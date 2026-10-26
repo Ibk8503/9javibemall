@@ -26,7 +26,7 @@ export const sendWelcomeEmail = createServerFn({ method: "POST" })
 /** Email the rider assigned to an order. Caller must be an owner/manager of the order's partner. */
 export const sendDeliveryAssignedEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ orderId: z.string().uuid() }).parse(d))
+  .validator((d) => z.object({ orderId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: order } = await context.supabase
       .from("orders").select("id, partner_id, order_ref, pickup_address, dropoff_address, assigned_rider_id")

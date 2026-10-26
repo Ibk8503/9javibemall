@@ -14,7 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
 /** Email every owner/manager of the order's partner about a delivery status change. */
 export const emailManagersDeliveryUpdate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ orderId: z.string().uuid(), note: z.string().max(500).optional() }).parse(d))
+  .validator((d) => z.object({ orderId: z.string().uuid(), note: z.string().max(500).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: order } = await context.supabase
       .from("orders")
@@ -77,7 +77,7 @@ ${data.note ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">Note</td><td
 /** Post a reply on an issue. Support replies are emailed to the reporter. */
 export const replyToIssue = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ issueId: z.string().uuid(), body: z.string().trim().min(1).max(4000) }).parse(d))
+  .validator((d) => z.object({ issueId: z.string().uuid(), body: z.string().trim().min(1).max(4000) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: issue } = await context.supabase
       .from("issue_reports")

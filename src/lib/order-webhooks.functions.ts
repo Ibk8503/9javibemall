@@ -31,7 +31,7 @@ async function createSignature(payload: string, secret: string): Promise<string>
 
 export const dispatchOrderWebhook = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => dispatchSchema.parse(input))
+  .validator((input) => dispatchSchema.parse(input))
   .handler(async ({ data, context }): Promise<DispatchResult> => {
     const { data: visibleOrder, error: visibleOrderError } = await context.supabase
       .from("orders")
