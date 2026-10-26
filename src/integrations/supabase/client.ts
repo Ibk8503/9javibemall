@@ -39,7 +39,7 @@ function createSupabaseClient() {
     (typeof process !== "undefined" && process.env?.["VITE_SUPABASE_URL"]) ||
     (typeof process !== "undefined" && process.env?.["SUPABASE_URL"]) ||
     (typeof window !== "undefined" && (window as any).__SUPABASE_URL) ||
-    "https://fcwweppdyepnxdfelofc.supabase.co";
+    "https://juzdxlfleuaunfshjtwn.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY =
     (typeof import.meta !== "undefined" && (import.meta.env as any)?.["VITE_SUPABASE_PUBLISHABLE_KEY"]) ||
     (typeof import.meta !== "undefined" && (import.meta.env as any)?.["SUPABASE_PUBLISHABLE_KEY"]) ||
