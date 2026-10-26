@@ -46,7 +46,7 @@ function createSupabaseClient() {
     (typeof process !== "undefined" && process.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"]) ||
     (typeof process !== "undefined" && process.env?.["SUPABASE_PUBLISHABLE_KEY"]) ||
     (typeof window !== "undefined" && (window as any).__SUPABASE_ANON_KEY) ||
-    "sb_publishable_n7IX8Z8izfESgUnW5p0U6w_y3GuDAT5";
+    "sb_publishable_m2TV2My2ncxGYzGMDiRACw_vWhVdsKE";
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
