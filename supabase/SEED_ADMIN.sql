@@ -25,6 +25,7 @@ declare
                    || md5(clock_timestamp()::text || random()::text), 1, 24);
   _uid   uuid;
   _created boolean := false;
+  c      record;
 begin
   if _email is null or _email = '' or _email = 'owner@example.com' then
     raise exception 'Set _email at the top of this script before running it.';
@@ -63,6 +64,21 @@ begin
       jsonb_build_object('sub', _uid::text, 'email', _email, 'email_verified', true),
       now(), now(), now()
     );
+
+    -- GoTrue reads the token columns as Go strings; a NULL makes sign-in fail
+    -- with "Database error querying schema". Normalise them to ''.
+    for c in
+      select column_name
+      from information_schema.columns
+      where table_schema = 'auth'
+        and table_name   = 'users'
+        and data_type in ('character varying', 'text')
+        and is_nullable  = 'YES'
+        and column_name not in ('email', 'encrypted_password')
+    loop
+      execute format('update auth.users set %I = %L where id = %L and %I is null',
+                     c.column_name, '', _uid, c.column_name);
+    end loop;
   else
     update auth.users
     set email_confirmed_at = coalesce(email_confirmed_at, now()),

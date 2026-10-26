@@ -12,14 +12,20 @@ export async function sendResendEmail(opts: {
 }): Promise<{ sent: boolean; error?: string }> {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const resendKey = process.env["RESEND_API_KEY"];
-  if (!lovableKey || !resendKey) return { sent: false, error: "Email is not configured" };
+  if (!resendKey) return { sent: false, error: "Email is not configured" };
   if (!opts.to.length) return { sent: false, error: "No recipients" };
-  const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+  // On Lovable hosting the call is proxied through the connector gateway (which
+  // needs LOVABLE_API_KEY); anywhere else we talk to Resend directly, so a
+  // RESEND_API_KEY on its own is enough.
+  const endpoint = lovableKey
+    ? "https://connector-gateway.lovable.dev/resend/emails"
+    : "https://api.resend.com/emails";
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": resendKey,
+      Authorization: `Bearer ${lovableKey ?? resendKey}`,
+      ...(lovableKey ? { "X-Connection-Api-Key": resendKey } : {}),
       ...(opts.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}),
     },
     body: JSON.stringify({

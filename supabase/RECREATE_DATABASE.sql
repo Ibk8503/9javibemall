@@ -1126,6 +1126,7 @@ declare
   _oid    uuid;
   _first  uuid;
   r       record;
+  c       record;
   _created_user boolean := false;
 begin
   -- Guard: refuse to run with the placeholder address.
@@ -1167,6 +1168,22 @@ begin
       jsonb_build_object('sub', _uid::text, 'email', _email, 'email_verified', true),
       now(), now(), now()
     );
+
+    -- GoTrue reads the token columns as Go strings, so a NULL there makes every
+    -- sign-in fail with "Database error querying schema". Normalise them to ''.
+    -- Generic on purpose: the exact column set differs between GoTrue versions.
+    for c in
+      select column_name
+      from information_schema.columns
+      where table_schema = 'auth'
+        and table_name   = 'users'
+        and data_type in ('character varying', 'text')
+        and is_nullable  = 'YES'
+        and column_name not in ('email', 'encrypted_password')
+    loop
+      execute format('update auth.users set %I = %L where id = %L and %I is null',
+                     c.column_name, '', _uid, c.column_name);
+    end loop;
   else
     -- Existing account: confirm the address but never reset its password.
     update auth.users
