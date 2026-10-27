@@ -1,4 +1,5 @@
 import React from "react";
+import { Link, type LinkProps } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 
 interface EmptyStateProps {
@@ -8,7 +9,7 @@ interface EmptyStateProps {
   action?: {
     label: string;
     onClick?: () => void;
-    href?: string;
+    href?: LinkProps["to"];
   };
 }
 
@@ -20,14 +21,19 @@ export function EmptyState({ icon: Icon, title, description, action }: EmptyStat
       </div>
       <h3 className="mt-4 font-display text-lg font-extrabold text-foreground">{title}</h3>
       <p className="mt-1.5 max-w-sm text-xs text-muted-foreground leading-relaxed">{description}</p>
-      {action && (
-        <Button
-          onClick={action.onClick}
-          className="neon-brand-btn mt-5 px-5 h-10 font-extrabold text-xs rounded-xl"
-        >
-          {action.label}
-        </Button>
-      )}
+      {action &&
+        (action.href ? (
+          <Button asChild className="neon-brand-btn mt-5 px-5 h-10 font-extrabold text-xs rounded-xl">
+            <Link to={action.href}>{action.label}</Link>
+          </Button>
+        ) : (
+          <Button
+            onClick={action.onClick}
+            className="neon-brand-btn mt-5 px-5 h-10 font-extrabold text-xs rounded-xl"
+          >
+            {action.label}
+          </Button>
+        ))}
     </div>
   );
 }
