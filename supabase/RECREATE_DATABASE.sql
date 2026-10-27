@@ -15,7 +15,8 @@
 --   * drops and recreates every table / enum / function / policy the app uses
 --   * recreates the RLS model (partner isolation + platform-support access)
 --   * enables realtime on the tables the UI subscribes to
---   * seeds the workspace, API key and a realistic demo order set
+--   * seeds the owner workspace + API key ONLY (no demo orders - this
+--     database is production; the app starts empty for real onboarding)
 --
 -- CREDENTIALS
 --   This file intentionally contains NO passwords and no seeded login.
@@ -1095,7 +1096,7 @@ end $$;
 
 
 -- ============================================================================
--- SECTION 10 — SEED: OWNER WORKSPACE + DEMO ORDERS  (OPTIONAL)
+-- SECTION 10 — SEED: OWNER WORKSPACE  (OPTIONAL)
 -- ----------------------------------------------------------------------------
 -- No credentials live in this file.
 --
@@ -1107,9 +1108,8 @@ end $$;
 -- Re-running is safe: it never overwrites the password of an existing
 -- account, it only re-creates missing workspace rows.
 --
--- Want an empty workspace (no demo orders)?
---   Run at the end:  delete from public.orders;
--- (delivery events / notifications cascade automatically)
+-- The workspace starts EMPTY: no demo orders, events or notifications are
+-- inserted, so the database is ready for real user onboarding.
 -- ============================================================================
 do $$
 declare
@@ -1123,9 +1123,6 @@ declare
   _uid    uuid;
   _pid    uuid;
   _ocode  text := 'SL-9JVBMALL';
-  _oid    uuid;
-  _first  uuid;
-  r       record;
   c       record;
   _created_user boolean := false;
 begin
@@ -1231,86 +1228,6 @@ begin
   -- -------------------------------------------------- 10.5 platform oversight
   insert into public.platform_support (user_id) values (_uid)
   on conflict (user_id) do nothing;
-
-  -- ------------------------------------------------------------ 10.6 demo data
-  if not exists (select 1 from public.orders where partner_id = _pid) then
-    for r in
-      select * from (values
-        ('9JV-10241', 'pending',      '14 Adeola Odeku Street, Victoria Island, Lagos', '22 Admiralty Way, Lekki Phase 1, Lagos',      '2x Bluetooth speaker, 1x phone case',        2),
-        ('9JV-10242', 'pending',      '9jaVibeMall Warehouse, Ikeja, Lagos',           '5 Bode Thomas Street, Surulere, Lagos',        '1x Electric kettle',                         5),
-        ('9JV-10243', 'pending',      '9jaVibeMall Warehouse, Ikeja, Lagos',           '31 Awolowo Road, Ikoyi, Lagos',                '3x Wireless earbuds',                       26),
-        ('9JV-10244', 'acknowledged', '7 Allen Avenue, Ikeja, Lagos',                  '12 Opebi Road, Ikeja, Lagos',                  '1x Office chair',                           30),
-        ('9JV-10245', 'acknowledged', '9jaVibeMall Warehouse, Ikeja, Lagos',           '4 Aguiyi Ironsi Street, Maitama, Abuja',       '1x Standing desk',                          33),
-        ('9JV-10246', 'in_transit',   '9jaVibeMall Warehouse, Ikeja, Lagos',           '18 Ozumba Mbadiwe Avenue, Victoria Island',    '2x Smart watch',                            48),
-        ('9JV-10247', 'in_transit',   '9jaVibeMall Warehouse, Ikeja, Lagos',           '6 Ring Road, Ibadan, Oyo',                     '1x Blender',                                52),
-        ('9JV-10248', 'in_transit',   '9jaVibeMall Warehouse, Ikeja, Lagos',           '77 Awolowo Way, Ikeja, Lagos',                 '5x Phone charger',                          56),
-        ('9JV-10249', 'delivered',    '9jaVibeMall Warehouse, Ikeja, Lagos',           '3 Adebayo Doherty Street, Lekki, Lagos',       '1x Microwave oven',                         74),
-        ('9JV-10250', 'delivered',    '9jaVibeMall Warehouse, Ikeja, Lagos',           '10 Ogunlana Drive, Surulere, Lagos',           '4x LED bulb pack',                          80),
-        ('9JV-10251', 'delivered',    '9jaVibeMall Warehouse, Ikeja, Lagos',           '2 Ahmadu Bello Way, Kaduna',                   '1x Gaming headset',                         96),
-        ('9JV-10252', 'delivered',    '9jaVibeMall Warehouse, Ikeja, Lagos',           '15 Aba Road, Port Harcourt, Rivers',           '1x Air fryer',                             104),
-        ('9JV-10253', 'failed',       '9jaVibeMall Warehouse, Ikeja, Lagos',           '8 Eket Road, Uyo, Akwa Ibom',                  '1x Vacuum cleaner',                        120)
-      ) as t(order_ref, status, pickup, dropoff, items, age_hours)
-    loop
-      insert into public.orders (
-        partner_id, order_ref, pickup_address, pickup_contact_name, pickup_contact_phone,
-        dropoff_address, dropoff_contact_name, dropoff_contact_phone, items, status,
-        created_at, updated_at, acknowledged_at, delivered_at
-      ) values (
-        _pid, r.order_ref, r.pickup, '9jaVibeMall Store', '+2348012345678',
-        r.dropoff, 'Customer', '+2348098765432', r.items, r.status::public.order_status,
-        now() - make_interval(hours => r.age_hours),
-        now() - make_interval(hours => r.age_hours) + interval '30 minutes',
-        case when r.status <> 'pending'
-             then now() - make_interval(hours => r.age_hours) + interval '20 minutes' end,
-        case when r.status = 'delivered'
-             then now() - make_interval(hours => r.age_hours) + interval '3 hours' end
-      )
-      returning id into _oid;
-
-      if _first is null and r.status = 'pending' then
-        _first := _oid;
-      end if;
-
-      insert into public.delivery_events (order_id, status, note, actor_id, created_at)
-      values (_oid, 'pending', 'Order created via Partner API feed', null,
-              now() - make_interval(hours => r.age_hours));
-
-      if r.status <> 'pending' then
-        insert into public.delivery_events (order_id, status, note, actor_id, created_at)
-        values (_oid, 'acknowledged', 'Order acknowledged by dispatch', _uid,
-                now() - make_interval(hours => r.age_hours) + interval '20 minutes');
-      end if;
-
-      if r.status in ('in_transit', 'delivered') then
-        insert into public.delivery_events (order_id, status, note, actor_id, created_at)
-        values (_oid, 'in_transit', 'Rider picked up the package', _uid,
-                now() - make_interval(hours => r.age_hours) + interval '1 hour');
-      end if;
-
-      if r.status = 'delivered' then
-        insert into public.delivery_events (order_id, status, note, actor_id, created_at)
-        values (_oid, 'delivered', 'Delivered to recipient', _uid,
-                now() - make_interval(hours => r.age_hours) + interval '3 hours');
-      end if;
-
-      if r.status = 'failed' then
-        insert into public.delivery_events (order_id, status, note, actor_id, created_at)
-        values (_oid, 'failed', 'Recipient unavailable at delivery address', _uid,
-                now() - make_interval(hours => r.age_hours) + interval '4 hours');
-      end if;
-    end loop;
-
-    if _first is not null then
-      insert into public.notifications (user_id, partner_id, type, order_id, title, message, is_read, created_at)
-      values
-        (_uid, _pid, 'ORDER_RECEIVED', _first,
-         'New delivery order', 'You have new orders awaiting acknowledgement.',
-         false, now() - interval '40 minutes'),
-        (_uid, _pid, 'ORDER_UNACKNOWLEDGED', _first,
-         'Unattended order', 'One of your orders has been waiting for acknowledgement for over 1 hour.',
-         true, now() - interval '20 minutes');
-    end if;
-  end if;
 
   raise notice 'Workspace ready. partner_id=%  user_id=%', _pid, _uid;
   if _created_user then
