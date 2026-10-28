@@ -21,12 +21,14 @@ export const Route = createFileRoute("/_authenticated/assist")({
   component: AssistPage,
 });
 
+function escapeHtml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function renderLine(line: string, i: number) {
-  const html = line
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
+  const safe = escapeHtml(line)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  return <p key={i} className="min-h-[0.75rem]" dangerouslySetInnerHTML={{ __html: html.replace(/^#+\s*/, "") }} />;
+  return <p key={i} className="min-h-[0.75rem]" dangerouslySetInnerHTML={{ __html: safe.replace(/^#+\s*/, "") }} />;
 }
 
 function AssistPage() {

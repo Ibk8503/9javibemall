@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { safeFetchWebhook, validateWebhookUrl } from "./webhook-security";
 
 const dispatchSchema = z.object({
   orderId: z.string().uuid(),
@@ -67,15 +68,23 @@ export const dispatchOrderWebhook = createServerFn({ method: "POST" })
       return { success: true };
     }
 
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(webhookUrl);
-    } catch {
-      return { success: false, error: "Stored webhook URL is invalid" };
-    }
-
-    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-      return { success: false, error: "Stored webhook URL must use HTTP or HTTPS" };
+    const urlCheck = await validateWebhookUrl(webhookUrl);
+    if (!urlCheck.ok) {
+      await supabaseAdmin.from("webhook_logs").insert({
+        partner_id: visibleOrder.partner_id,
+        order_id: data.orderId,
+        order_ref: data.orderRef ?? privateOrder.order_ref,
+        webhook_url: webhookUrl,
+        event: data.status,
+        request_headers: {},
+        request_payload: { order_id: data.orderRef ?? privateOrder.order_ref ?? data.orderId, status: data.status },
+        signature: "",
+        response_status: 0,
+        response_body: null,
+        duration_ms: 0,
+        error: `Blocked by SSRF protection: ${urlCheck.error}`,
+      });
+      return { success: false, error: "Stored webhook URL is not allowed" };
     }
 
     const { data: credentials, error: credentialsError } = await supabaseAdmin
@@ -104,12 +113,11 @@ export const dispatchOrderWebhook = createServerFn({ method: "POST" })
     let errorMessage: string | null = null;
 
     try {
-      const response = await fetch(parsedUrl, {
+      const response = await safeFetchWebhook(webhookUrl, {
         method: "POST",
         headers,
         body: payload,
-        signal: AbortSignal.timeout(8000),
-      });
+      }, 8000);
       responseStatus = response.status;
       responseBody = await response.text();
       if (!response.ok) errorMessage = `HTTP Error ${response.status}`;

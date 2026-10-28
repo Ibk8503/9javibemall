@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { authenticatePartnerKey } from "@/lib/api-auth";
+import { validateWebhookUrl } from "@/lib/webhook-security";
 
 export const Route = createFileRoute("/api/Public/Orders")({
   server: {
@@ -45,13 +46,12 @@ export const Route = createFileRoute("/api/Public/Orders")({
             );
           }
 
-          // Validate Webhook URL if provided
+          // Validate Webhook URL if provided (SSRF protection)
           if (webhook_url && typeof webhook_url === "string") {
-            try {
-              new URL(webhook_url);
-            } catch {
+            const check = await validateWebhookUrl(webhook_url.trim());
+            if (!check.ok) {
               return Response.json(
-                { error: "Invalid webhook_url format. Must be a valid HTTP/HTTPS URL." },
+                { error: check.error || "Invalid webhook_url" },
                 { status: 400 },
               );
             }
